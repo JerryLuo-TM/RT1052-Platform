@@ -8,8 +8,8 @@
 
 #include "TF.h"
 
-static FATFS g_fileSystem; /* File system object */
-static FIL g_fileObject;   /* File object */
+FATFS g_fileSystem; /* File system object */
+FIL g_fileObject;   /* File object */
 
 /*! @brief SDMMC host detect card configuration */
 static const sdmmchost_detect_card_t s_sdCardDetect = {

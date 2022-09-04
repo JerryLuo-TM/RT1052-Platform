@@ -21,6 +21,8 @@ void RTC_Init(void)
     snvs_hp_rtc_config_t snvsRtcConfig;
     snvs_lp_srtc_config_t snvsSrtcConfig;
 
+	  (void)snvsSrtcConfig;
+
 	SNVS_HP_RTC_GetDefaultConfig(&snvsRtcConfig);
     SNVS_HP_RTC_Init(SNVS, &snvsRtcConfig);
 
