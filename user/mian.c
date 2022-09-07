@@ -73,7 +73,7 @@ void led_task(void *pvParameters)
     for (;;)
     {
 		rand_num += 1;
-		if((rand_num % 20) == 0) {
+		if((rand_num % 10) == 0) {
 			LED_G_Toggle;
 		}
 		vTaskDelayUntil(&xLastWakeTime, configTICK_RATE_HZ/10);
@@ -93,29 +93,48 @@ void gui_task(void *pvParameters)
 
 void battery_task(void *pvParameters)
 {
-	int vbat, vbus, chgc, charge_status;
-	// int fault, vbus_type, temp, sysv;
+	int vbus, vsys, vbat, chgc, charge_status;
+	int fault, vbus_type, temp;
+	static bool bq_need_reinit = true;
 	TickType_t xLastWakeTime = xTaskGetTickCount();
     for (;;)
     {
 		bq2589x_reset_watchdog_timer();
-		bq2589x_adc_start(true);
-		// fault = bq25895_read_fault_reg();
-		// vbus_type = bq2589x_get_vbus_type();
-		charge_status = bq2589x_get_charging_status();
-		vbat = bq2589x_adc_read_battery_volt();
 		vbus = bq2589x_adc_read_vbus_volt();
+		vsys = bq2589x_adc_read_sys_volt();
+		vbat = bq2589x_adc_read_battery_volt();
 		chgc = bq2589x_adc_read_charge_current();
+		charge_status = bq2589x_get_charging_status();
 
-		// sysv = bq2589x_adc_read_sys_volt();
-		// temp = bq2589x_adc_read_temperature();
-		BQ25895.vbat = (float)((float)vbat) / 1000.0f;
+		fault = bq25895_read_fault_reg();
+		vbus_type = bq2589x_get_vbus_type();
+		temp = bq2589x_adc_read_temperature();
+
 		BQ25895.vbus = (float)((float)vbus) / 1000.0f;
+		BQ25895.vbat = (float)((float)vbat) / 1000.0f;
 		BQ25895.chgc = (float)((float)chgc) / 1000.0f;
 		BQ25895.charge_status = charge_status;
+
+		if ((vbus_type != 0) && (bq_need_reinit == true)) {
+			Init_BQ25895();
+			bq_need_reinit = false;
+		} else if (vbus_type == 0) {
+			bq_need_reinit = true;
+		}
+
+		PRINTF("\r\n");
+		PRINTF(" ------------------ bq25895 ------------------ \r\n");
+		PRINTF("[REG 0x0E] vbat = %d mV \r\n", vbat);
+		PRINTF("[REG 0x11] vbus = %d mV \r\n", vbus);
+		PRINTF("[REG 0x0F] vsys = %d mV \r\n", vsys);
+		PRINTF("[REG 0x12] chgc = %d  \r\n", chgc);
+		PRINTF("[REG 0x10] temp = %d  \r\n", temp);
+		PRINTF("[REG 0x0B] vbus_type = %d \r\n", vbus_type);
+		PRINTF("[REG 0x0B] charge_status = %d  [0:no chg  1:pre chg  2:fast chg  3:chg done]\r\n", charge_status);
+		PRINTF("[REG 0x0C] fault = %d  \r\n", fault);
+		PRINTF(" ------------------ end ------------------ \r\n");
+
 		if(hWinInfo != NULL) {
-			// PRINTF("vbat=%d vbus=%d sysv=%d chgc=%d temp=%d type=%d ch_state=%d fault=%d\r\n", 
-			// 				vbat, vbus, sysv, chgc, temp, vbus_type, charge_status, fault);
 			WM_SendMessageNoPara(hWinInfo, MSG_SYSINFO);
 		}
 
@@ -234,7 +253,7 @@ void create_task(void)
 	if( xTaskCreate(led_task,		"led_task",			128 / sizeof(uint32_t),   NULL, 6, NULL) != pdPASS){ LED_R(1); }
 	if( xTaskCreate(battery_task,	"battery_task",		1024 / sizeof(uint32_t),  NULL, 1, NULL) != pdPASS){ LED_R(1); }
 	if( xTaskCreate(tf_task,		"tf_task",			2048 / sizeof(uint32_t),  NULL, 1, NULL) != pdPASS){ LED_R(1); }
-	if( xTaskCreate(gui_task,		"gui_task",			(1024 * 3) / sizeof(uint32_t),  NULL, 5, NULL) != pdPASS){ LED_R(1); }
+	// if( xTaskCreate(gui_task,		"gui_task",			(1024 * 3) / sizeof(uint32_t),  NULL, 5, NULL) != pdPASS){ LED_R(1); }
 	taskEXIT_CRITICAL();
 }
 
